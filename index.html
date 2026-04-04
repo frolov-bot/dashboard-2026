@@ -776,9 +776,7 @@ function startAutoRefresh() {
 }
 
 // Старт
-document.addEventListener('DOMContentLoaded', () => {
-  loadData().then(() => startAutoRefresh());
-});
+loadData().then(() => startAutoRefresh());
 </script>
 </body>
 </html>
