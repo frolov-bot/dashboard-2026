@@ -325,6 +325,9 @@ async function loadData() {
   btn.classList.add('loading');
   document.getElementById('refreshIcon').textContent = '⏳';
 
+  // Перезагружаем страницу чтобы получить свежие данные с GitHub
+  setTimeout(() => location.reload(), 300);
+
   // Загружаем встроенные данные мгновенно
   DATA = STATIC_DATA;
   populateSelects();
@@ -765,27 +768,45 @@ document.getElementById('topDate').textContent = `Сегодня: ${fd}`;
 document.getElementById('footDate').textContent = fd;
 
 // ===== АВТООБНОВЛЕНИЕ =====
-const AUTO_REFRESH_MS = 60 * 60 * 1000; // 1 час
+const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 минут
 let refreshTimer = null;
 let nextRefreshAt = null;
 let countdownTimer = null;
 
+function getNextWorkflowTime() {
+  const now = new Date();
+  const next = new Date(now);
+  const mins = now.getMinutes();
+  if (mins < 30) {
+    next.setMinutes(30, 0, 0);
+  } else {
+    next.setMinutes(0, 0, 0);
+    next.setHours(next.getHours() + 1);
+  }
+  return next.getTime();
+}
+
 function startAutoRefresh() {
   if (refreshTimer) clearInterval(refreshTimer);
   if (countdownTimer) clearInterval(countdownTimer);
-  nextRefreshAt = Date.now() + AUTO_REFRESH_MS;
-  refreshTimer = setInterval(() => {
-    loadData();
-    nextRefreshAt = Date.now() + AUTO_REFRESH_MS;
-  }, AUTO_REFRESH_MS);
-  // Таймер обратного отсчёта в UI
+
+  // Перезагружаем страницу в момент следующего штатного обновления
+  function scheduleNext() {
+    const msToNext = getNextWorkflowTime() - Date.now();
+    refreshTimer = setTimeout(() => {
+      location.reload();
+    }, msToNext + 15000); // +15 сек чтобы воркфлоу успел отработать
+  }
+  scheduleNext();
+
+  // Таймер обратного отсчёта до ближайшего :00 или :30
   countdownTimer = setInterval(() => {
-    const remaining = nextRefreshAt - Date.now();
+    const remaining = getNextWorkflowTime() - Date.now();
     if (remaining <= 0) return;
     const m = Math.floor(remaining / 60000);
     const s = Math.floor((remaining % 60000) / 1000);
     const el = document.getElementById('nextRefresh');
-    if (el) el.textContent = `Авто-обновление через ${m}:${String(s).padStart(2,'0')}`;
+    if (el) el.textContent = `Обновление данных через ${m}:${String(s).padStart(2,'0')}`;
   }, 1000);
 }
 
