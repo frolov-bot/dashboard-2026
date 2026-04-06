@@ -623,6 +623,10 @@ function renderTable(f) {
   const sorted = [...f].sort((a,b) => {
     let va=a[sortCol]||'', vb=b[sortCol]||'';
     if (sortCol==='estatus') { va=sord[a.estatus]??9; vb=sord[b.estatus]??9; }
+    if (sortCol==='responsible') {
+      va = a.resp==='rvb' ? 'РВБ' : (a.responsible||'');
+      vb = b.resp==='rvb' ? 'РВБ' : (b.responsible||'');
+    }
     if (va<vb) return -1*sortDir; if (va>vb) return 1*sortDir; return 0;
   });
   tbody.innerHTML = sorted.map(r => `
