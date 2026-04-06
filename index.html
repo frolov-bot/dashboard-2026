@@ -235,7 +235,7 @@ tr.row-fine:hover{background:#fffbeb}
       <option value="eviction">🚨 Выселение</option><option value="fine">💰 Штраф</option></select></div>
   <div class="fg"><label>Ответственный</label>
     <select id="fResp"><option value="all">Все</option>
-      <option value="rvb">РВБ (субарендатор)</option><option value="vi">ВИ</option></select></div>
+      <option value="rvb">РВБ (субарендатор)</option><option value="Марфин В.А.">Марфин В.А.</option><option value="фролов">фролов</option></select></div>
   <div class="fg"><label>Срок</label>
     <select id="fDL"><option value="all">Любой</option>
       <option value="overdue">Просрочен</option><option value="soon">Скоро (≤14 дн)</option>
@@ -522,6 +522,16 @@ function populateSelects() {
     op.textContent = `${num} (${fmtD(date)})`;
     actSel.appendChild(op);
   });
+
+  const respNames = [...new Set(enriched.map(r=>r.responsible||'').filter(Boolean))].sort();
+  const respSel = document.getElementById('fResp');
+  const curResp = respSel.value;
+  respSel.innerHTML = '<option value="all">Все</option><option value="rvb">РВБ (субарендатор)</option>';
+  respNames.forEach(n => {
+    const op = document.createElement('option'); op.value = n; op.textContent = n;
+    respSel.appendChild(op);
+  });
+  if (curResp) respSel.value = curResp;
 }
 
 // ===== ФИЛЬТРАЦИЯ =====
@@ -544,14 +554,14 @@ function getFiltered() {
     if (ac !== 'all' && r.actNum !== ac) return false;
     if (st !== 'all' && r.estatus !== st) return false;
     if (ri !== 'all' && r.risk !== ri) return false;
-    if (re !== 'all' && r.resp !== re) return false;
+    if (re !== 'all') { if (re === 'rvb' && r.resp !== 'rvb') return false; else if (re !== 'rvb' && (r.responsible||'').toLowerCase() !== re.toLowerCase()) return false; }
     if (dl !== 'all') {
       if (dl === 'overdue' && r.estatus !== 'overdue') return false;
       if (dl === 'none' && r.deadline) return false;
       if (dl === 'soon') { const d = dlInfo(r); if (!d || d.diff < 0 || d.diff > 14) return false; }
       if (dl === 'ok') { const d = dlInfo(r); if (!d || d.diff < 0 || d.diff <= 14) return false; }
     }
-    if (se) { const hay = (r.text+' '+r.object+' '+r.actNum+' '+r.comment).toLowerCase(); if (!hay.includes(se)) return false; }
+    if (se) { const hay = (r.text+' '+r.object+' '+r.actNum+' '+r.comment+' '+(r.responsible||'')).toLowerCase(); if (!hay.includes(se)) return false; }
     return true;
   });
 }
