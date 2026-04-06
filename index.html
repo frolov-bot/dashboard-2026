@@ -179,7 +179,7 @@ tr.row-fine:hover{background:#fffbeb}
       <span><span class="ldot" style="background:#7c3aed"></span>РВБ</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-      <span id="nextRefresh" style="font-size:11px;color:#64748b">Обновление данных через 30:00</span>
+      <span id="nextRefresh" style="font-size:11px;color:#64748b">Обновление данных через 60:00</span>
     </div>
   </div>
 </div>
@@ -773,18 +773,11 @@ const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 минут
 let refreshTimer = null;
 let nextRefreshAt = null;
 let countdownTimer = null;
+const _pageLoadTime = Date.now();
 
 function getNextWorkflowTime() {
-  const now = new Date();
-  const next = new Date(now);
-  const mins = now.getMinutes();
-  if (mins < 30) {
-    next.setMinutes(30, 0, 0);
-  } else {
-    next.setMinutes(0, 0, 0);
-    next.setHours(next.getHours() + 1);
-  }
-  return next.getTime();
+  // GitHub Actions срабатывает примерно раз в час — считаем 60 мин от загрузки страницы
+  return _pageLoadTime + 60 * 60 * 1000;
 }
 
 function startAutoRefresh() {
