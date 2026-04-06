@@ -33,7 +33,6 @@ def parse_remarks(xlsx_bytes):
     for row_idx, row in enumerate(ws.iter_rows(min_row=1, values_only=True), 1):
         col0 = str(row[0]).strip() if row[0] else ""
 
-        # Ищем заголовок акта 2026 года
         if re.search(r'Акт[уа]?\s*№', col0, re.IGNORECASE) and "2026" in col0:
             num_match = re.search(r'(ЧШ|ДД|ШШ|СПБ|МСК|00)-\d+', col0)
             current_act_num = num_match.group(0) if num_match else col0[:30]
@@ -129,10 +128,19 @@ def update_index_html(remarks):
         html = f.read()
     new_json = json.dumps(remarks, ensure_ascii=False, separators=(",", ":"))
     new_data = f'const STATIC_DATA = {new_json};'
-    new_html = re.sub(r'const STATIC_DATA = \[.*?\];', new_data, html, flags=re.DOTALL)
-    if new_html == html:
+
+    marker_start = "const STATIC_DATA = ["
+    marker_end = "];"
+    idx_start = html.find(marker_start)
+    if idx_start == -1:
         print("ОШИБКА: STATIC_DATA не найден в index.html")
         return False
+    idx_end = html.find(marker_end, idx_start)
+    if idx_end == -1:
+        print("ОШИБКА: конец STATIC_DATA не найден")
+        return False
+    new_html = html[:idx_start] + new_data + html[idx_end + len(marker_end):]
+
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
         f.write(new_html)
     print(f"index.html обновлён ({len(remarks)} замечаний)")
