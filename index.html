@@ -627,6 +627,10 @@ function renderTable(f) {
       va = a.resp==='rvb' ? 'РВБ' : (a.responsible||'');
       vb = b.resp==='rvb' ? 'РВБ' : (b.responsible||'');
     }
+    if (sortCol==='risk') {
+      const ro = {eviction:0, fine:1, '':2};
+      va = ro[a.risk]??2; vb = ro[b.risk]??2;
+    }
     if (va<vb) return -1*sortDir; if (va>vb) return 1*sortDir; return 0;
   });
   tbody.innerHTML = sorted.map(r => `
