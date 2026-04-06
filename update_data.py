@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
-import json
-import re
-import sys
-import io
-import urllib.request
-import urllib.parse
-import urllib.error
+import json, re, sys, io, urllib.request, urllib.parse
 from datetime import datetime, date
 
 YADISK_PUBLIC_KEY = "https://disk.360.yandex.ru/i/pbXk6jtc2OeG5Q"
 INDEX_HTML = "index.html"
-
 
 def download_from_yadisk():
     print("Получаю ссылку на скачивание с Яндекс Диска...")
@@ -26,7 +19,6 @@ def download_from_yadisk():
     print(f"Скачано: {len(content)} байт")
     return content
 
-
 def parse_remarks(xlsx_bytes):
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
@@ -36,53 +28,64 @@ def parse_remarks(xlsx_bytes):
     current_act_date = None
     current_object = None
     row_id = 0
+    today = date.today()
 
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-        if row_idx < 315:
-            continue
+    for row_idx, row in enumerate(ws.iter_rows(min_row=1, values_only=True), 1):
         col0 = str(row[0]).strip() if row[0] else ""
-        if re.match(r'^(ЧШ|ДД)-\d{8}$', col0):
-            current_act_num = col0
-            if row[1]:
-                try:
-                    if isinstance(row[1], (datetime, date)):
-                        current_act_date = row[1].strftime("%Y-%m-%d")
-                    else:
-                        current_act_date = str(row[1])[:10]
-                except Exception:
-                    current_act_date = str(row[1])
-            current_object = str(row[2]).strip() if row[2] else ""
+
+        # Ищем заголовок акта 2026 года
+        if re.search(r'Акт[уа]?\s*№', col0, re.IGNORECASE) and "2026" in col0:
+            num_match = re.search(r'(ЧШ|ДД|ШШ|СПБ|МСК|00)-\d+', col0)
+            current_act_num = num_match.group(0) if num_match else col0[:30]
+            date_match = re.search(r'(\d+)\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4})', col0)
+            months = {"января":1,"февраля":2,"марта":3,"апреля":4,"мая":5,"июня":6,
+                      "июля":7,"августа":8,"сентября":9,"октября":10,"ноября":11,"декабря":12}
+            if date_match:
+                d, m, y = date_match.groups()
+                current_act_date = f"{y}-{months[m]:02d}-{int(d):02d}"
+            else:
+                current_act_date = "2026-01-01"
+            current_object = None
             continue
 
-        if not col0 or col0 in ("None", "") or not current_act_num:
-            continue
-        if any(x in col0.lower() for x in ["замечание", "наименование", "пункт"]):
+        if not current_act_num:
             continue
 
-        text = col0
-        risk = str(row[2]).strip() if len(row) > 2 and row[2] and str(row[2]) != "None" else ""
-        deadline1 = str(row[6]).strip() if len(row) > 6 and row[6] else ""
-        deadline2 = str(row[7]).strip() if len(row) > 7 and row[7] else ""
-        comment = str(row[9]).strip() if len(row) > 9 and row[9] else ""
-        comment2 = str(row[10]).strip() if len(row) > 10 and row[10] else ""
-        comment3 = str(row[11]).strip() if len(row) > 11 and row[11] else ""
-        full_comment = " | ".join(filter(None, [comment, comment2, comment3]))
+        text = col0.replace('\xa0', '').strip()
+        if not text or text in ("None", ""):
+            continue
+        if re.search(r'Акт[уа]?\s*№', text, re.IGNORECASE):
+            if "2026" not in text:
+                current_act_num = None
+            continue
+
+        obj = str(row[1]).strip() if len(row) > 1 and row[1] else ""
+        if obj and obj != "None":
+            current_object = obj
         responsible = str(row[5]).strip() if len(row) > 5 and row[5] else ""
 
         deadline = ""
-        for d in [deadline2, deadline1]:
-            if d and d not in ("None", "") and len(d) >= 8:
-                deadline = d[:10]
-                break
+        for col_idx in [8, 7, 6]:
+            if len(row) > col_idx and row[col_idx]:
+                d = row[col_idx]
+                if isinstance(d, (datetime, date)):
+                    deadline = d.strftime("%Y-%m-%d") if isinstance(d, datetime) else d.isoformat()
+                elif "2026" in str(d) or "2025" in str(d):
+                    deadline = str(d)[:10]
+                if deadline:
+                    break
 
+        comments = []
+        for ci in [9, 10, 11]:
+            if len(row) > ci and row[ci] and str(row[ci]) not in ("None", ""):
+                comments.append(str(row[ci]).strip())
+        full_comment = " | ".join(filter(None, comments))
         comment_lower = full_comment.lower()
-        today = date.today()
+        text_lower = text.lower()
 
         if any(x in comment_lower for x in ["устранено", "выполнено", "готово", "убрали", "демонтир"]):
             status = "done"
-        elif any(x in comment_lower for x in ["направлено", "мониторинг", "регулярн", "письмо"]):
-            status = "progress"
-        elif re.search(r'2026', full_comment):
+        elif any(x in comment_lower for x in ["направлено", "мониторинг", "регулярн", "письмо"]) or re.search(r'2026-\d{2}-\d{2}', full_comment):
             status = "progress"
         else:
             status = "open"
@@ -92,27 +95,23 @@ def parse_remarks(xlsx_bytes):
                 dl = datetime.strptime(deadline[:10], "%Y-%m-%d").date()
                 if dl < today:
                     status = "overdue"
-            except Exception:
+            except:
                 pass
 
-        text_lower = text.lower()
         eviction_risk = any(x in text_lower for x in [
             "мезонин", "огнезащит", "огнестойкост", "лвж", "гж", "гсм",
-            "аэрозольн", "проживание", "система орошени"
+            "аэрозольн", "проживание", "система орошени", "орошени"
         ])
-        fine_risk = any(x in text_lower for x in [
-            "штраф", "нарушен", "предписани", "протокол"
-        ]) or eviction_risk
-        is_rvb = "рвб" in comment_lower or "rvb" in comment_lower
+        fine_risk = any(x in text_lower for x in ["штраф", "нарушен", "предписани", "протокол"]) or eviction_risk
+        is_rvb = "рвб" in comment_lower or (len(comments) > 0 and "РВБ" in comments[0])
 
         row_id += 1
         remarks.append({
             "id": row_id,
-            "object": current_object,
+            "object": current_object or "",
             "actNum": current_act_num,
-            "actDate": current_act_date or "",
+            "actDate": current_act_date,
             "text": text,
-            "risk": risk,
             "responsible": responsible,
             "deadline": deadline,
             "comment": full_comment,
@@ -125,14 +124,12 @@ def parse_remarks(xlsx_bytes):
     print(f"Распарсено {len(remarks)} замечаний")
     return remarks
 
-
 def update_index_html(remarks):
     with open(INDEX_HTML, encoding="utf-8") as f:
         html = f.read()
     new_json = json.dumps(remarks, ensure_ascii=False, separators=(",", ":"))
-    old_pattern = r'const STATIC_DATA = \[.*?\];'
     new_data = f'const STATIC_DATA = {new_json};'
-    new_html = re.sub(old_pattern, new_data, html, flags=re.DOTALL)
+    new_html = re.sub(r'const STATIC_DATA = \[.*?\];', new_data, html, flags=re.DOTALL)
     if new_html == html:
         print("ОШИБКА: STATIC_DATA не найден в index.html")
         return False
@@ -140,7 +137,6 @@ def update_index_html(remarks):
         f.write(new_html)
     print(f"index.html обновлён ({len(remarks)} замечаний)")
     return True
-
 
 if __name__ == "__main__":
     try:
