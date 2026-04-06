@@ -567,7 +567,6 @@ function renderStats(f) {
     <div class="sc s-all"><div class="sc-label">Всего</div><div class="sc-num">${tot}</div><div class="sc-sub">в выборке</div></div>
     <div class="sc s-done" onclick="qf('fStatus','done')"><div class="sc-label">Устранено</div><div class="sc-num">${done}</div><div class="sc-sub">${tot?Math.round(done/tot*100):0}%</div></div>
     <div class="sc s-prog" onclick="qf('fStatus','progress')"><div class="sc-label">В работе</div><div class="sc-num">${prog}</div><div class="sc-sub">срок не прошёл</div></div>
-    <div class="sc s-open" onclick="qf('fStatus','open')"><div class="sc-num">${open}</div><div class="sc-label">Не устранено</div></div>
     <div class="sc s-over" onclick="qf('fStatus','overdue')"><div class="sc-label">Просрочено</div><div class="sc-num">${over}</div><div class="sc-sub">срок истёк</div></div>
     <div class="sc s-evict" onclick="qf('fRisk','eviction')"><div class="sc-label">Риск выселения</div><div class="sc-num">${evict}</div><div class="sc-sub">открытых</div></div>
     <div class="sc s-fine" onclick="qf('fRisk','fine')"><div class="sc-label">Риск штрафа</div><div class="sc-num">${fine}</div><div class="sc-sub">открытых</div></div>
