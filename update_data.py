@@ -104,6 +104,9 @@ def parse_remarks(xlsx_bytes):
         fine_risk = any(x in text_lower for x in ["штраф", "нарушен", "предписани", "протокол"]) or eviction_risk
         is_rvb = "рвб" in comment_lower or (len(comments) > 0 and "РВБ" in comments[0])
 
+        risk = "eviction" if eviction_risk else ("fine" if fine_risk else "")
+        resp = "rvb" if is_rvb else ""
+
         row_id += 1
         remarks.append({
             "id": row_id,
@@ -112,15 +115,20 @@ def parse_remarks(xlsx_bytes):
             "actDate": current_act_date,
             "text": text,
             "responsible": responsible,
+            "resp": resp,
+            "respName": responsible,
             "deadline": deadline,
             "comment": full_comment,
             "status": status,
+            "risk": risk,
             "evictionRisk": eviction_risk,
             "fineRisk": fine_risk,
             "isRvb": is_rvb
         })
 
     print(f"Распарсено {len(remarks)} замечаний")
+    evict_open = sum(1 for r in remarks if r['evictionRisk'] and r['status'] != 'done')
+    print(f"Риск выселения (открытых): {evict_open}")
     return remarks
 
 def update_index_html(remarks):
