@@ -3,7 +3,7 @@ name: Обновление данных дашборда
 on:
   schedule:
     # Каждый час
-    - cron: '*/30 * * * *'
+    - cron: '5,35 * * * *'
   workflow_dispatch:
     # Ручной запуск из GitHub UI
 
