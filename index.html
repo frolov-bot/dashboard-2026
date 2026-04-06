@@ -111,8 +111,11 @@ select:focus,input:focus{border-color:var(--blue)}
 table{width:100%;border-collapse:collapse;min-width:900px}
 thead tr{background:#f8fafc;border-bottom:2px solid #e2e8f0}
 th{padding:11px 13px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;white-space:nowrap}
-th.sort{cursor:pointer;user-select:none}
+th.sort{cursor:pointer;user-select:none;white-space:nowrap}
 th.sort:hover{color:var(--blue)}
+th.sort::after{content:' ⇅';opacity:0.35;font-size:11px}
+th.sort.asc::after{content:' ↑';opacity:1;color:var(--blue)}
+th.sort.desc::after{content:' ↓';opacity:1;color:var(--blue)}
 td{padding:11px 13px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr.row-evict{background:#fff1f2}
@@ -266,12 +269,12 @@ tr.row-fine:hover{background:#fffbeb}
         <th class="sort" data-col="object">Объект</th>
         <th class="sort" data-col="actDate">Дата акта</th>
         <th class="sort" data-col="actNum">Акт №</th>
-        <th style="min-width:260px">Замечание</th>
-        <th>Риск</th>
+        <th class="sort" data-col="text" style="min-width:260px">Замечание</th>
+        <th class="sort" data-col="risk">Риск</th>
         <th class="sort" data-col="estatus">Статус</th>
-        <th>Ответственный</th>
+        <th class="sort" data-col="responsible">Ответственный</th>
         <th class="sort" data-col="deadline">Срок устранения</th>
-        <th style="min-width:160px">Комментарий</th>
+        <th class="sort" data-col="comment" style="min-width:160px">Комментарий</th>
       </tr></thead>
       <tbody id="tableBody"></tbody>
     </table>
@@ -729,9 +732,13 @@ document.querySelectorAll('th.sort').forEach(th => {
   th.addEventListener('click', () => {
     const c = th.dataset.col;
     if (sortCol===c) sortDir*=-1; else {sortCol=c; sortDir=1;}
+    document.querySelectorAll('th.sort').forEach(t => t.classList.remove('asc','desc'));
+    th.classList.add(sortDir===1 ? 'asc' : 'desc');
     render();
   });
 });
+// Инициализируем стрелку по умолчанию
+document.querySelector('th.sort[data-col="actDate"]')?.classList.add('asc');
 
 // CSV
 document.getElementById('btnExport').addEventListener('click', () => {
