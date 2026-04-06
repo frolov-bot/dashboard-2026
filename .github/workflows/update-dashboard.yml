@@ -1,0 +1,44 @@
+name: Обновление данных дашборда
+
+on:
+  schedule:
+    # Каждый час
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    # Ручной запуск из GitHub UI
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout репозитория
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Установка Python зависимостей
+        run: pip install openpyxl
+
+      - name: Скачать Excel и обновить данные
+        run: python update_data.py
+
+      - name: Проверить изменения
+        id: check_changes
+        run: |
+          if git diff --quiet index.html; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Данные не изменились, пропускаем коммит"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Обнаружены изменения в данных"
+          fi
+
+      - name: Коммит и пуш обновлённого index.html
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Auto: обновление данных $(date '+%Y-%m-%d %H:%M') UTC"
+          git push
