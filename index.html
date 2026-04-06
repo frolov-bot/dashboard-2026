@@ -179,7 +179,7 @@ tr.row-fine:hover{background:#fffbeb}
       <span><span class="ldot" style="background:#7c3aed"></span>РВБ</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-      <button class="refresh-btn" id="refreshBtn" onclick="loadData().then(()=>startAutoRefresh())">
+      <button class="refresh-btn" id="refreshBtn" onclick="location.reload()">
         <span id="refreshIcon">🔄</span> Обновить сейчас
       </button>
       <span id="nextRefresh" style="font-size:10px;color:#64748b">Авто-обновление через 60:00</span>
@@ -324,9 +324,6 @@ async function loadData() {
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('loading');
   document.getElementById('refreshIcon').textContent = '⏳';
-
-  // Перезагружаем страницу чтобы получить свежие данные с GitHub
-  setTimeout(() => location.reload(), 300);
 
   // Загружаем встроенные данные мгновенно
   DATA = STATIC_DATA;
