@@ -318,9 +318,7 @@ const STATIC_DATA = [{"id":1,"object":"Чашниково","actNum":"ЧШ-000000
 
 // ===== ЗАГРУЗКА ДАННЫХ =====
 async function loadData() {
-  const btn = document.getElementById('refreshBtn');
-  btn.classList.add('loading');
-  document.getElementById('refreshIcon').textContent = '⏳';
+
 
   // Загружаем встроенные данные мгновенно
   DATA = STATIC_DATA;
@@ -336,8 +334,7 @@ async function loadData() {
   const errorWrap = document.getElementById('errorWrap');
   if (errorWrap) errorWrap.classList.remove('visible');
 
-  btn.classList.remove('loading');
-  document.getElementById('refreshIcon').textContent = '🔄';
+
 }
 
 function showLoader(text, sub) {
