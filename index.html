@@ -207,6 +207,7 @@ tr.row-fine:hover{background:#fffbeb}
 
 <div class="stats" id="statsGrid"></div>
 <div id="sysIndicators" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 2px 16px"></div>
+<div id="respIndicators" style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 16px 8px 16px"></div>
 
 <div class="progress-wrap">
   <div class="progress-top"><span>Прогресс устранения</span><span id="progLabel"></span></div>
@@ -611,6 +612,26 @@ function renderStats(f) {
       if (!n) return '';
       const [bg,color,icon] = sysColors[s]||['#f9fafb','#4b5563','❓'];
       return `<div onclick="qf('fSystem','${s}')" style="background:${bg};border:1px solid ${color}30;padding:5px 12px;border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${color}">${icon} ${s} <span style="background:${color};color:#fff;border-radius:9px;padding:1px 7px;font-size:11px;margin-left:3px">${n}</span></div>`;
+    }).join('');
+  }
+
+  const respWrap = document.getElementById('respIndicators');
+  if (respWrap) {
+    // Собираем уникальных ответственных по открытым замечаниям
+    const respMap = {};
+    f.filter(r => r.estatus !== 'done').forEach(r => {
+      const name = r.resp === 'rvb' ? 'РВБ' : (r.respName || r.responsible || '—');
+      if (!name || name === '—') return;
+      respMap[name] = (respMap[name] || 0) + 1;
+    });
+    const sorted = Object.entries(respMap).sort((a,b) => b[1]-a[1]);
+    respWrap.innerHTML = sorted.map(([name, n]) => {
+      const isRvb = name === 'РВБ';
+      const bg = isRvb ? '#f5f3ff' : '#f0f9ff';
+      const color = isRvb ? '#7c3aed' : '#0369a1';
+      const filterVal = isRvb ? 'rvb' : name;
+      return `<div onclick="qf('fResp','${filterVal}')" style="background:${bg};border:1px solid ${color}30;padding:5px 12px;border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${color}">
+        👤 ${name} <span style="background:${color};color:#fff;border-radius:9px;padding:1px 7px;font-size:11px;margin-left:3px">${n}</span></div>`;
     }).join('');
   }
 
