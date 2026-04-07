@@ -19,6 +19,31 @@ def download_from_yadisk():
     print(f"Скачано: {len(content)} байт")
     return content
 
+
+def classify_system(text):
+    t = text.lower()
+    if any(x in t for x in ['спринклер', 'орошени', 'огнезащит', 'огнестойкост', 'апс', 'аупт', 'аувп', 'ипр', ' пк ', 'пк №', 'впв', 'извещател', 'пожарн', 'эвакуац', 'дымов', 'мезонин', 'лду', 'противопожарн']):
+        return 'Пожарная безопасность'
+    if any(x in t for x in ['лвж', 'гж', 'гсм', 'аэрозол', 'топлив', 'горюч']):
+        return 'ЛВЖ/ГСМ'
+    if any(x in t for x in ['ворота', 'дверь', 'двери', 'замок', 'петли', 'докшелтер', 'аппарел', 'доквеллер', 'шлагбаум', 'жалюзи']):
+        return 'Ворота и двери'
+    if any(x in t for x in ['кабел', 'щит', 'силовой', 'зарядн', 'розетк', 'удлинител', 'электр', 'слаботочн']):
+        return 'Электрика'
+    if any(x in t for x in ['пол ', 'полов', 'топпинг', 'асфальт', 'покрыти']):
+        return 'Покрытие полов'
+    if any(x in t for x in ['стена', 'панел', 'перила', 'забор', 'ограждени', 'отбойник', 'бетон', 'конструкци', 'кровл', 'крыш', 'арматур', 'пандус']):
+        return 'Конструктив'
+    if any(x in t for x in ['вентиляц', 'вытяжк', 'приток', 'воздух']):
+        return 'Вентиляция'
+    if any(x in t for x in ['проживани', 'абч', 'бытовк', 'санузел', 'парковк', 'курилк', 'насажден']):
+        return 'АБЧ/Территория'
+    if any(x in t for x in ['стеллаж', 'склад', 'хранени', 'зона']):
+        return 'Склад/Хранение'
+    if any(x in t for x in ['план эвакуац', 'план', 'документ', 'журнал', 'инструкци', 'ответствен']):
+        return 'Документация'
+    return 'Прочее'
+
 def parse_remarks(xlsx_bytes):
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
@@ -123,7 +148,8 @@ def parse_remarks(xlsx_bytes):
             "risk": risk,
             "evictionRisk": eviction_risk,
             "fineRisk": fine_risk,
-            "isRvb": is_rvb
+            "isRvb": is_rvb,
+            "system": classify_system(text)
         })
 
     print(f"Распарсено {len(remarks)} замечаний")
