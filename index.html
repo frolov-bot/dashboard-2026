@@ -206,6 +206,7 @@ tr.row-fine:hover{background:#fffbeb}
 </div>
 
 <div class="stats" id="statsGrid"></div>
+<div id="sysIndicators" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 2px 16px"></div>
 
 <div class="progress-wrap">
   <div class="progress-top"><span>Прогресс устранения</span><span id="progLabel"></span></div>
@@ -230,6 +231,8 @@ tr.row-fine:hover{background:#fffbeb}
   <div class="fg"><label>Риск</label>
     <select id="fRisk"><option value="all">Любой</option>
       <option value="eviction">🚨 Выселение</option><option value="fine">💰 Штраф</option></select></div>
+  <div class="fg"><label>Система</label>
+    <select id="fSystem"><option value="all">Все системы</option><option value="Пожарная безопасность">🔥 Пожарная безопасность</option><option value="ЛВЖ/ГСМ">🛢️ ЛВЖ/ГСМ</option><option value="Ворота и двери">🚪 Ворота и двери</option><option value="Электрика">⚡ Электрика</option><option value="Покрытие полов">🏗️ Покрытие полов</option><option value="Конструктив">🧱 Конструктив</option><option value="Вентиляция">💨 Вентиляция</option><option value="АБЧ/Территория">🏠 АБЧ/Территория</option><option value="Склад/Хранение">📦 Склад/Хранение</option><option value="Документация">📄 Документация</option><option value="Прочее">❓ Прочее</option></select></div>
   <div class="fg"><label>Ответственный</label>
     <select id="fResp"><option value="all">Все</option>
       <option value="rvb">РВБ (субарендатор)</option><option value="Марфин В.А.">Марфин В.А.</option><option value="фролов">фролов</option></select></div>
@@ -268,6 +271,7 @@ tr.row-fine:hover{background:#fffbeb}
         <th class="sort" data-col="actNum">Акт №</th>
         <th class="sort" data-col="text" style="min-width:260px">Замечание</th>
         <th class="sort" data-col="risk">Риск</th>
+        <th class="sort" data-col="system">Система</th>
         <th class="sort" data-col="estatus">Статус</th>
         <th class="sort" data-col="responsible">Ответственный</th>
         <th class="sort" data-col="deadline">Срок устранения</th>
@@ -473,6 +477,23 @@ function statusBadge(s) {
   return `<span class="badge ${cls}">${lbl}</span>`;
 }
 
+
+function systemBadge(s) {
+  switch(s) {
+    case 'Пожарная безопасность': return `<span style="background:#fee2e2;color:#7f1d1d;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">🔥 ${s}</span>`;
+    case 'ЛВЖ/ГСМ': return `<span style="background:#fef3c7;color:#78350f;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">🛢️ ${s}</span>`;
+    case 'Ворота и двери': return `<span style="background:#dbeafe;color:#1e3a5f;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">🚪 ${s}</span>`;
+    case 'Электрика': return `<span style="background:#fef9c3;color:#713f12;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">⚡ ${s}</span>`;
+    case 'Покрытие полов': return `<span style="background:#f3f4f6;color:#374151;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">🏗️ ${s}</span>`;
+    case 'Конструктив': return `<span style="background:#e5e7eb;color:#1f2937;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">🧱 ${s}</span>`;
+    case 'Вентиляция': return `<span style="background:#cffafe;color:#164e63;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">💨 ${s}</span>`;
+    case 'АБЧ/Территория': return `<span style="background:#dcfce7;color:#14532d;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">🏠 ${s}</span>`;
+    case 'Склад/Хранение': return `<span style="background:#ede9fe;color:#312e81;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">📦 ${s}</span>`;
+    case 'Документация': return `<span style="background:#eff6ff;color:#1e40af;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">📄 ${s}</span>`;
+    case 'Прочее': return `<span style="background:#f9fafb;color:#4b5563;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">❓ ${s}</span>`;
+    default: return `<span style="background:#f9fafb;color:#4b5563;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600">❓ ${s}</span>`;
+  }
+}
 function riskBadge(r) {
   return r === 'eviction'
     ? `<span class="badge b-evict">🚨 Выселение</span>`
@@ -548,6 +569,8 @@ function getFiltered() {
     if (ac !== 'all' && r.actNum !== ac) return false;
     if (st !== 'all' && r.estatus !== st) return false;
     if (ri !== 'all' && r.risk !== ri) return false;
+    const sy = document.getElementById('fSystem') ? document.getElementById('fSystem').value : 'all';
+    if (sy !== 'all' && (r.system||'Прочее') !== sy) return false;
     if (re !== 'all') { if (re === 'rvb' && r.resp !== 'rvb') return false; else if (re !== 'rvb' && (r.responsible||'').toLowerCase() !== re.toLowerCase()) return false; }
     if (dl !== 'all') {
       if (dl === 'overdue' && r.estatus !== 'overdue') return false;
@@ -579,6 +602,18 @@ function renderStats(f) {
     <div class="sc s-fine" onclick="qf('fRisk','fine')"><div class="sc-label">Риск штрафа</div><div class="sc-num">${fine}</div><div class="sc-sub">открытых</div></div>
     <div class="sc s-rvb" onclick="qf('fResp','rvb')"><div class="sc-label">На РВБ</div><div class="sc-num">${rvb}</div><div class="sc-sub">субарендатор</div></div>`;
 
+  const sysWrap = document.getElementById('sysIndicators');
+  if (sysWrap) {
+    const systems = ['Пожарная безопасность','ЛВЖ/ГСМ','Ворота и двери','Электрика','Покрытие полов','Конструктив','Вентиляция','АБЧ/Территория','Склад/Хранение','Документация','Прочее'];
+    const sysColors = {'Пожарная безопасность':['#fee2e2','#7f1d1d','🔥'],'ЛВЖ/ГСМ':['#fef3c7','#78350f','🛢️'],'Ворота и двери':['#dbeafe','#1e3a5f','🚪'],'Электрика':['#fef9c3','#713f12','⚡'],'Покрытие полов':['#f3f4f6','#374151','🏗️'],'Конструктив':['#e5e7eb','#1f2937','🧱'],'Вентиляция':['#cffafe','#164e63','💨'],'АБЧ/Территория':['#dcfce7','#14532d','🏠'],'Склад/Хранение':['#ede9fe','#312e81','📦'],'Документация':['#eff6ff','#1e40af','📄'],'Прочее':['#f9fafb','#4b5563','❓']};
+    sysWrap.innerHTML = systems.map(s => {
+      const n = f.filter(r => (r.system||'Прочее')===s && r.estatus!=='done').length;
+      if (!n) return '';
+      const [bg,color,icon] = sysColors[s]||['#f9fafb','#4b5563','❓'];
+      return `<div onclick="qf('fSystem','${s}')" style="background:${bg};border:1px solid ${color}30;padding:5px 12px;border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${color}">${icon} ${s} <span style="background:${color};color:#fff;border-radius:9px;padding:1px 7px;font-size:11px;margin-left:3px">${n}</span></div>`;
+    }).join('');
+  }
+
   const pct = tot ? [done,prog,open,over].map(n=>(n/tot*100).toFixed(1)) : ['0','0','0','0'];
   document.getElementById('progBar').innerHTML = `
     <div class="pb-done" style="width:${pct[0]}%"></div>
@@ -603,7 +638,7 @@ function renderCrit() {
   const body = document.getElementById('critBody');
   if (items.length === 0) { body.innerHTML='<div style="padding:16px 20px;color:#16a34a;font-weight:600">✅ Нет открытых замечаний с риском выселения</div>'; return; }
   let h = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#7f1d1d;color:#fff">';
-  h += '<th style="padding:10px 14px;text-align:left">Объект</th><th style="padding:10px 14px;text-align:left">Акт</th><th style="padding:10px 14px;min-width:240px;text-align:left">Замечание</th><th style="padding:10px 14px;text-align:left">Статус</th><th style="padding:10px 14px;text-align:left">Ответственный</th><th style="padding:10px 14px;text-align:left">Срок</th><th style="padding:10px 14px;text-align:left">Комментарий</th></tr></thead><tbody>';
+  h += '<th style="padding:10px 14px;text-align:left">Объект</th><th style="padding:10px 14px;text-align:left">Акт</th><th style="padding:10px 14px;min-width:240px;text-align:left">Замечание</th><th style="padding:10px 14px;text-align:left">Статус</th><th style="padding:10px 14px;text-align:left">Ответственный</th><th style="padding:10px 14px;text-align:left">Система</th><th style="padding:10px 14px;text-align:left">Срок</th><th style="padding:10px 14px;text-align:left">Комментарий</th></tr></thead><tbody>';
   items.forEach(r => {
     h += `<tr style="background:#fff1f2;border-bottom:1px solid #fca5a5">
       <td style="padding:10px 14px"><span class="badge b-obj">${r.object}</span></td>
@@ -611,6 +646,7 @@ function renderCrit() {
       <td style="padding:10px 14px;font-weight:600">${r.text}</td>
       <td style="padding:10px 14px">${statusBadge(r.estatus)}</td>
       <td style="padding:10px 14px;color:#334155;font-weight:500">${r.resp==='rvb'?'<span style="color:#7c3aed;font-weight:600">РВБ</span>':r.respName||r.responsible||'—'}</td>
+      <td style="padding:10px 14px">${systemBadge(r.system||'Прочее')}</td>
       <td style="padding:10px 14px">${dlCell(r)}</td>
       <td style="padding:10px 14px;color:#64748b">${r.comment||'—'}</td>
     </tr>`;
@@ -646,6 +682,7 @@ function renderTable(f) {
       <td><span class="badge b-act">${r.actNum}</span></td>
       <td style="max-width:290px">${r.resp==='rvb'?'<span class="badge b-rvb" style="margin-bottom:3px;display:inline-block">РВБ</span><br>':''}<span style="font-weight:${r.risk==='eviction'?'600':'400'}">${r.text}</span></td>
       <td>${riskBadge(r.risk)}</td>
+      <td style="font-size:11px;white-space:nowrap">${systemBadge(r.system||'Прочее')}</td>
       <td>${statusBadge(r.estatus)}</td>
       <td>${respCell(r)}</td>
       <td style="min-width:120px">${dlCell(r)}</td>
@@ -729,7 +766,7 @@ function toggleCrit() {
 });
 document.getElementById('fSearch').addEventListener('input', render);
 document.getElementById('btnReset').addEventListener('click', () => {
-  ['fYear','fMonth','fObject','fAct','fStatus','fRisk','fResp','fDL'].forEach(id => {
+  ['fYear','fMonth','fObject','fAct','fStatus','fRisk','fSystem','fResp','fDL'].forEach(id => {
     document.getElementById(id).value = id==='fYear' ? '2026' : 'all';
   });
   document.getElementById('fSearch').value = '';
