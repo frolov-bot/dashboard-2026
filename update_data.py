@@ -11,6 +11,12 @@ from datetime import datetime, date
 YADISK_PUBLIC_KEY = "https://disk.360.yandex.ru/i/pbXk6jtc2OeG5Q"
 INDEX_HTML = "index.html"
 
+MONTHS_RU = {
+    "января": "01", "февраля": "02", "марта": "03", "апреля": "04",
+    "мая": "05", "июня": "06", "июля": "07", "августа": "08",
+    "сентября": "09", "октября": "10", "ноября": "11", "декабря": "12"
+}
+
 
 def download_from_yadisk():
     print("Получаю ссылку на скачивание с Яндекс Диска...")
@@ -27,14 +33,24 @@ def download_from_yadisk():
     return content
 
 
+def parse_act_date(text):
+    """Парсит дату из строки вида 'Акт № ЧШ-00000001 от 14 января 2026 г.'"""
+    m = re.search(r'от\s+(\d{1,2})\s+(\w+)\s+(\d{4})', text, re.IGNORECASE)
+    if m:
+        day, month_str, year = m.group(1), m.group(2).lower(), m.group(3)
+        month = MONTHS_RU.get(month_str)
+        if month:
+            return f"{year}-{month}-{day.zfill(2)}"
+    return ""
+
+
 def parse_remarks(xlsx_bytes):
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
 
-    # DEBUG: показываем все листы
     print(f"=== Листы в файле: {wb.sheetnames} ===")
 
-    # Ищем нужный лист (гибкий поиск)
+    # Ищем нужный лист
     ws = None
     for name in wb.sheetnames:
         if "акт" in name.lower() or "претензи" in name.lower() or "сфн" in name.lower():
@@ -43,61 +59,41 @@ def parse_remarks(xlsx_bytes):
             break
     if ws is None:
         ws = wb.active
-        print(f"Нужный лист не найден, используем активный: '{ws.title}'")
+        print(f"Используем активный лист: '{ws.title}'")
 
     remarks = []
     current_act_num = None
     current_act_date = None
     current_object = None
     row_id = 0
-    debug_printed = 0
 
-    # DEBUG: печатаем строки 310-325 чтобы понять структуру
-    print("=== DEBUG: строки 310-330 (col0, col1, col2) ===")
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-        if 310 <= row_idx <= 330:
-            col0 = str(row[0])[:60] if row[0] else "(пусто)"
-            col1 = str(row[1])[:20] if len(row) > 1 and row[1] else "(пусто)"
-            col2 = str(row[2])[:30] if len(row) > 2 and row[2] else "(пусто)"
-            print(f"  row {row_idx}: col0='{col0}' | col1='{col1}' | col2='{col2}'")
-
-    # Основной парсинг
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if row_idx < 315:
             continue
+
         col0 = str(row[0]).strip() if row[0] else ""
 
-        # Проверяем заголовок акта — расширенный паттерн
-        is_act_header = (
-            re.match(r'^(ЧШ|ДД|чш|дд)-\d{6,10}$', col0) or
-            re.match(r'^(ЧШ|ДД|чш|дд)\s*[-–—]\s*\d{6,10}', col0) or
-            re.match(r'^Акт\s+№?\s*\S+', col0, re.IGNORECASE) or
-            re.match(r'^\d{2,3}-\d{2,4}/\d{4}', col0)
-        )
+        # Заголовок акта: "Акт № ЧШ-00000001 от 14 января 2026 г."
+        is_act_header = bool(re.match(r'^Акт\s+№', col0, re.IGNORECASE))
 
         if is_act_header:
-            current_act_num = col0
-            if row[1]:
-                try:
-                    if isinstance(row[1], (datetime, date)):
-                        current_act_date = row[1].strftime("%Y-%m-%d")
-                    else:
-                        current_act_date = str(row[1])[:10]
-                except Exception:
-                    current_act_date = str(row[1])
-            current_object = str(row[2]).strip() if row[2] else ""
-            # DEBUG: первые 5 найденных актов
-            if debug_printed < 5:
-                print(f"  [ACT] row {row_idx}: '{col0}' | date='{current_act_date}' | obj='{current_object}'")
-                debug_printed += 1
+            # Извлекаем номер акта
+            num_match = re.search(r'((?:ЧШ|ДД|чш|дд|[А-Яа-я]{2})-\d+|\d{2}-\d+)', col0)
+            current_act_num = num_match.group(1) if num_match else col0[:30]
+            current_act_date = parse_act_date(col0)
+            # Объект в col1 (Чашниково / Дедовск и т.д.)
+            current_object = str(row[1]).strip() if row[1] else ""
             continue
 
         if not col0 or col0 in ("None", "") or not current_act_num:
             continue
-        if any(x in col0.lower() for x in ["замечание", "наименование", "пункт", "№"]):
+        # Пропускаем строки-заголовки таблицы
+        if any(x in col0.lower() for x in ["замечание", "наименование", "пункт", "№ п/п"]):
             continue
 
         text = col0
+        # Объект замечания тоже в col1
+        obj = str(row[1]).strip() if len(row) > 1 and row[1] and str(row[1]) != "None" else current_object
         risk = str(row[2]).strip() if len(row) > 2 and row[2] and str(row[2]) != "None" else ""
         deadline1 = str(row[6]).strip() if len(row) > 6 and row[6] else ""
         deadline2 = str(row[7]).strip() if len(row) > 7 and row[7] else ""
@@ -107,15 +103,24 @@ def parse_remarks(xlsx_bytes):
         full_comment = " | ".join(filter(None, [comment, comment2, comment3]))
         responsible = str(row[5]).strip() if len(row) > 5 and row[5] else ""
 
+        # Дедлайн
         deadline = ""
         for d in [deadline2, deadline1]:
             if d and d not in ("None", "") and len(d) >= 8:
+                # Если дата как объект datetime
+                try:
+                    if hasattr(d, 'strftime'):
+                        deadline = d.strftime("%Y-%m-%d")
+                        break
+                except Exception:
+                    pass
                 deadline = d[:10]
                 break
 
         comment_lower = full_comment.lower()
         today = date.today()
 
+        # Статус
         if any(x in comment_lower for x in ["устранено", "выполнено", "готово", "убрали", "демонтир"]):
             status = "done"
         elif any(x in comment_lower for x in ["направлено", "мониторинг", "регулярн", "письмо"]):
@@ -146,7 +151,7 @@ def parse_remarks(xlsx_bytes):
         row_id += 1
         remarks.append({
             "id": row_id,
-            "object": current_object,
+            "object": obj or current_object,
             "actNum": current_act_num,
             "actDate": current_act_date or "",
             "text": text,
