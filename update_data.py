@@ -44,6 +44,33 @@ def parse_act_date(text):
     return ""
 
 
+
+def classify_system(text):
+    t = text.lower()
+    if any(x in t for x in ['спринклер', 'орошени', 'огнезащит', 'огнестойкост', 'апс', 'аупт', 'аувп', 'ипр', ' пк ', 'пк №', 'впв', 'извещател', 'пожарн', 'эвакуац', 'дымов', 'мезонин', 'лду', 'противопожарн']):
+        return 'Пожарная безопасность'
+    if any(x in t for x in ['пол ', 'полов', 'топпинг', 'покрыти пол', 'напольн']):
+        return 'Покрытие полов'
+    if any(x in t for x in ['асфальт']):
+        return 'Покрытие полов'
+    if any(x in t for x in ['лвж', 'гж', 'гсм', 'аэрозол', 'топлив', 'горюч']):
+        return 'ЛВЖ/ГСМ'
+    if any(x in t for x in ['ворота', 'дверь', 'двери', 'замок', 'петли', 'докшелтер', 'аппарел', 'доквеллер', 'шлагбаум', 'жалюзи']):
+        return 'Ворота и двери'
+    if any(x in t for x in ['кабел', 'щит', 'силовой', 'зарядн', 'розетк', 'удлинител', 'электр', 'слаботочн']):
+        return 'Электрика'
+    if any(x in t for x in ['стена', 'панел', 'перила', 'забор', 'ограждени', 'отбойник', 'бетон', 'конструкци', 'кровл', 'крыш', 'арматур', 'пандус']):
+        return 'Конструктив'
+    if any(x in t for x in ['вентиляц', 'вытяжк', 'приток', 'воздух']):
+        return 'Вентиляция'
+    if any(x in t for x in ['проживани', 'абч', 'бытовк', 'санузел', 'парковк', 'курилк', 'насажден']):
+        return 'АБЧ/Территория'
+    if any(x in t for x in ['стеллаж', 'склад', 'хранени', 'зона']):
+        return 'Склад/Хранение'
+    if any(x in t for x in ['план эвакуац', 'план', 'документ', 'журнал', 'инструкци', 'ответствен']):
+        return 'Документация'
+    return 'Прочее'
+
 def parse_remarks(xlsx_bytes):
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
@@ -162,7 +189,8 @@ def parse_remarks(xlsx_bytes):
             "status": status,
             "evictionRisk": eviction_risk,
             "fineRisk": fine_risk,
-            "isRvb": is_rvb
+            "isRvb": is_rvb,
+            "system": classify_system(text)
         })
 
     print(f"Распарсено {len(remarks)} замечаний")
@@ -173,12 +201,18 @@ def update_index_html(remarks):
     with open(INDEX_HTML, encoding="utf-8") as f:
         html = f.read()
     new_json = json.dumps(remarks, ensure_ascii=False, separators=(",", ":"))
-    old_pattern = r'const STATIC_DATA = \[.*?\];'
-    new_data = f'const STATIC_DATA = {new_json};'
-    new_html = re.sub(old_pattern, new_data, html, flags=re.DOTALL)
-    if new_html == html:
+    marker_start = 'const STATIC_DATA = ['
+    marker_end = '];'
+    start_idx = html.find(marker_start)
+    if start_idx == -1:
         print("ОШИБКА: STATIC_DATA не найден в index.html")
         return False
+    end_idx = html.find(marker_end, start_idx + len(marker_start))
+    if end_idx == -1:
+        print("ОШИБКА: конец STATIC_DATA не найден")
+        return False
+    new_data = f'const STATIC_DATA = {new_json};'
+    new_html = html[:start_idx] + new_data + html[end_idx + len(marker_end):]
     with open(INDEX_HTML, "w", encoding="utf-8") as f:
         f.write(new_html)
     print(f"index.html обновлён ({len(remarks)} замечаний)")
