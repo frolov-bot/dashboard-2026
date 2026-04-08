@@ -189,6 +189,8 @@ def parse_remarks(xlsx_bytes):
             "status": status,
             "evictionRisk": eviction_risk,
             "fineRisk": fine_risk,
+            "resp": "rvb" if is_rvb else "",
+            "respName": responsible,
             "isRvb": is_rvb,
             "system": classify_system(text)
         })
