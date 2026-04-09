@@ -121,7 +121,7 @@ def parse_remarks(xlsx_bytes):
         text = col0
         # Объект замечания тоже в col1
         obj = str(row[1]).strip() if len(row) > 1 and row[1] and str(row[1]) != "None" else current_object
-        risk = str(row[2]).strip() if len(row) > 2 and row[2] and str(row[2]) != "None" else ""
+        risk_raw = str(row[2]).strip() if len(row) > 2 and row[2] and str(row[2]) != "None" else ""
         deadline1 = str(row[6]).strip() if len(row) > 6 and row[6] else ""
         deadline2 = str(row[7]).strip() if len(row) > 7 and row[7] else ""
         comment = str(row[9]).strip() if len(row) > 9 and row[9] else ""
@@ -166,13 +166,15 @@ def parse_remarks(xlsx_bytes):
                 pass
 
         text_lower = text.lower()
-        eviction_risk = any(x in text_lower for x in [
+        risk_lower = risk_raw.lower()
+        eviction_risk = ('высел' in risk_lower) or any(x in text_lower for x in [
             "мезонин", "огнезащит", "огнестойкост", "лвж", "гж", "гсм",
             "аэрозольн", "проживание", "система орошени"
         ])
-        fine_risk = any(x in text_lower for x in [
+        fine_risk = ('штраф' in risk_lower) or any(x in text_lower for x in [
             "штраф", "нарушен", "предписани", "протокол"
         ]) or eviction_risk
+        risk = "eviction" if eviction_risk else ("fine" if fine_risk else "")
         is_rvb = "рвб" in comment_lower or "rvb" in comment_lower
 
         row_id += 1
